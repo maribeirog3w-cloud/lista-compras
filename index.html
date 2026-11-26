@@ -38,6 +38,7 @@ h2{font-family:var(--display);font-weight:600;font-size:1.2rem;margin:0}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center}
 .bar .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
 .bar .val{font-size:1.15rem}
+.bar .units{font-size:.8rem;font-weight:600;opacity:.9}
 .bar .budget{font-size:.78rem;opacity:.9}
 .btn{font:600 .9rem var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:10px 14px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
@@ -189,8 +190,8 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
   <div id="tabLista" class="tabwrap">
 
   <section class="bar" aria-label="Totais">
-    <div><div class="lbl">No carrinho</div><div class="val money" id="tCart">R$ 0,00</div></div>
-    <div><div class="lbl">Lista inteira</div><div class="val money" id="tAll">R$ 0,00</div><div class="budget" id="tBudget"></div></div>
+    <div><div class="lbl">No carrinho</div><div class="val money" id="tCart">R$ 0,00</div><div class="units" id="uCart">0 unidades</div></div>
+    <div><div class="lbl">Lista inteira</div><div class="val money" id="tAll">R$ 0,00</div><div class="units" id="uAll">0 unidades</div><div class="budget" id="tBudget"></div></div>
     <button class="btn" id="finish" type="button">Finalizar compra</button>
   </section>
 
@@ -272,7 +273,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Versão do app: <strong id="appVer">18</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">19</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -349,6 +350,8 @@ function render(){
   const all=items.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
   const cart=items.filter(i=>i.ok).reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
   $("tAll").textContent=brl(all);$("tCart").textContent=brl(cart);
+  const un=n=>n+(n===1?" unidade":" unidades");
+  $("uAll").textContent=un(items.reduce((s,i)=>s+(i.qtd||1),0));$("uCart").textContent=un(items.filter(i=>i.ok).reduce((s,i)=>s+(i.qtd||1),0));
   const sem=items.filter(i=>i.preco==null).length;
   const left=items.filter(i=>!i.ok).length;
   $("finish").disabled=!items.some(i=>i.ok);
@@ -362,7 +365,7 @@ function render(){
     const g=items.filter(i=>i.cat===c);if(!g.length)continue;
     g.sort((a,b)=>(a.ok-b.ok)||a.nome.localeCompare(b.nome,"pt-BR"));
     const box=el("div","group");const h=el("div","ghead");
-    h.append(el("span",null,c),el("span","money",brl(g.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0))));box.append(h);
+    h.append(el("span",null,c+" · "+g.reduce((s,i)=>s+(i.qtd||1),0)+" un"),el("span","money",brl(g.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0))));box.append(h);
     for(const it of g){
       const r=el("div","item"+(it.ok?" done":""));
       const b=el("button","chk",it.ok?"✓":"");b.type="button";b.setAttribute("aria-pressed",it.ok);b.setAttribute("aria-label",(it.ok?"Desmarcar ":"Marcar ")+it.nome);
@@ -569,7 +572,7 @@ function setDiscMode(m){discMode=m;$("dModeR").classList.toggle("on",m==="R");$(
 $("dModeR").onclick=()=>setDiscMode("R");$("dModeP").onclick=()=>setDiscMode("P");
 $("dDisc").addEventListener("input",updFin);$("dTotal").addEventListener("input",()=>totalTouched=true);
 $("finish").onclick=()=>{const ok=items.filter(i=>i.ok);const est=ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
-  $("dlgText").textContent=`${ok.length} itens marcados vão para o histórico e saem da lista. Os ${items.length-ok.length} não marcados continuam para a próxima compra.`;
+  $("dlgText").textContent=`${ok.length} itens marcados (${ok.reduce((s,i)=>s+(i.qtd||1),0)} unidades) vão para o histórico e saem da lista. Os ${items.length-ok.length} não marcados continuam para a próxima compra.`;
   totalTouched=false;$("dDisc").value="";setDiscMode("R");$("dTotal").value=fmtIn(est);$("dStore").value=store;if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
 $("dCancel").onclick=()=>dlg.close();
 $("dOk").onclick=async()=>{
@@ -681,7 +684,7 @@ function openReport(t){repTrip=t;const box=$("repBody");box.replaceChildren();
   const d=tripDeltas(t);const its=t.itens||[];
   $("repTitle").textContent="Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"});
   if(t.desconto>0){const dd=el("div","rbox good");dd.append(el("strong",null,"Desconto de "+brl(t.desconto)),el("div","note","Subtotal "+brl(t.subtotal)+" − desconto "+brl(t.desconto)+" = pago "+brl(t.total)));setTimeout(()=>{const h=box.querySelector(".rhead");if(h)h.after(dd)},0)}
-  const head=el("div","rhead");head.append(el("div","rtot money",brl(t.total)),el("div","note",(t.mercado?t.mercado+" · ":"")+its.length+" itens · "+fmtDate(t.data,{weekday:"long"})));box.append(head);
+  const head=el("div","rhead");head.append(el("div","rtot money",brl(t.total)),el("div","note",(t.mercado?t.mercado+" · ":"")+its.length+" itens · "+its.reduce((s,i)=>s+(i.qtd||1),0)+" unidades · "+fmtDate(t.data,{weekday:"long"})));box.append(head);
   // mês
   const mTot=trips.filter(x=>x.mes===t.mes).reduce((s,x)=>s+x.total,0);
   const ml=el("p","note","No mês: "+brl(mTot)+(budget?" de "+brl(budget)+" do orçamento ("+Math.round(mTot/budget*100)+"%)":""));box.append(ml);
@@ -704,7 +707,7 @@ function openReport(t){repTrip=t;const box=$("repBody");box.replaceChildren();
   if(Math.abs(soma-t.total)>0.009&&soma>0)box.append(el("p","note","Soma dos itens com preço: "+brl(soma)+". Valor pago: "+brl(t.total)+"."));
   const rd=$("rep");if(rd.showModal)rd.showModal();else rd.setAttribute("open","")}
 function reportText(t){const d=tripDeltas(t);const s=d.reduce((a,b)=>a+b.impacto,0);
-  let x="🛒 Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"})+(t.mercado?" no "+t.mercado:"")+"\n"+(t.desconto>0?"Subtotal: "+brl(t.subtotal)+" · Desconto: "+brl(t.desconto)+"\n":"")+"Total: "+brl(t.total)+" · "+(t.itens||[]).length+" itens\n";
+  let x="🛒 Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"})+(t.mercado?" no "+t.mercado:"")+"\n"+(t.desconto>0?"Subtotal: "+brl(t.subtotal)+" · Desconto: "+brl(t.desconto)+"\n":"")+"Total: "+brl(t.total)+" · "+(t.itens||[]).length+" itens, "+(t.itens||[]).reduce((s,i)=>s+(i.qtd||1),0)+" unidades\n";
   if(d.length)x+=(s<0?"Economia de "+brl(-s):s>0?"Pagou "+brl(s)+" a mais":"Mesmos preços")+" vs compra anterior\n";
   x+="\n"+(t.itens||[]).map(i=>"• "+i.nome+(i.qtd>1?" ("+i.qtd+")":"")+(i.preco!=null?" — "+brl(i.preco*(i.qtd||1)):"")).join("\n");return x}
 $("repClose").onclick=()=>$("rep").close();
