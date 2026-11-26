@@ -134,6 +134,13 @@ input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surfac
 .item.done .chk{background:var(--accent);border-color:var(--accent)}
 .item.done .name{text-decoration:line-through;color:var(--muted)}
 .name{min-width:0;overflow-wrap:anywhere}
+.nm{border:0;background:none;color:inherit;font:inherit;padding:0;text-align:left;cursor:text;overflow-wrap:anywhere}
+.nm::after{content:" ✎";font-size:.75em;color:var(--muted)}
+.item.done .nm{text-decoration:line-through;color:var(--muted)}
+.edit{display:flex;flex-direction:column;gap:6px}
+.edit input,.edit select{padding:7px 9px;font-size:.92rem}
+.edit .ea{display:flex;gap:6px}
+.edit .ea .btn{padding:6px 12px;font-size:.82rem}
 .name small{display:block;color:var(--muted);font-size:.78rem}
 .cmp{display:inline-block;margin-top:3px;font-size:.74rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--accent-soft)}
 .cmp{color:var(--fg)}.cmp.eq{color:var(--muted)}.cmp .arr{font-size:.9rem;margin-right:3px}.cmp.up .arr{color:var(--danger)}.cmp.down .arr{color:var(--up-green)}
@@ -273,7 +280,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Versão do app: <strong id="appVer">19</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">20</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -370,7 +377,14 @@ function render(){
       const r=el("div","item"+(it.ok?" done":""));
       const b=el("button","chk",it.ok?"✓":"");b.type="button";b.setAttribute("aria-pressed",it.ok);b.setAttribute("aria-label",(it.ok?"Desmarcar ":"Marcar ")+it.nome);
       b.onclick=()=>{it.ok=!it.ok;render();putItem(it)};
-      const n=el("div","name",it.nome);
+      const n=el("div","name");const nb=el("button","nm",it.nome);nb.type="button";nb.setAttribute("aria-label","Editar "+it.nome);n.append(nb);
+      nb.onclick=()=>{const ed=el("div","edit");const ni=el("input");ni.id="e_"+it.id;ni.value=it.nome;ni.maxLength=60;ni.setAttribute("aria-label","Nome do item");
+        const cs=el("select");cs.setAttribute("aria-label","Categoria");for(const c of CATS){const o=el("option",null,c);o.value=c;cs.append(o)}cs.value=it.cat;
+        const ea=el("div","ea");const ok=el("button","btn primary","Salvar");ok.type="button";const cancel=el("button","btn","Cancelar");cancel.type="button";ea.append(ok,cancel);
+        const save=()=>{const v=ni.value.trim().slice(0,60);if(v&&(v!==it.nome||cs.value!==it.cat)){it.nome=v;it.cat=cs.value;putItem(it);toast("Item atualizado")}render()};
+        ok.onclick=save;cancel.onclick=()=>render();
+        ni.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();save()}else if(e.key==="Escape")render()});
+        ed.append(ni,cs,ea);n.replaceChildren(ed);ni.focus();ni.setSelectionRange(ni.value.length,ni.value.length)};
       const lp=lastPrice(it.nome);
       if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")+(lp.mercado?" · "+lp.mercado:"")));
         const bp=bestPrice(it.nome);
