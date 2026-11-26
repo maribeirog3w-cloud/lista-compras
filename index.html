@@ -127,6 +127,13 @@ input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surfac
 .cmp{display:inline-block;margin-top:3px;font-size:.74rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--accent-soft)}
 .cmp{color:var(--fg)}.cmp.eq{color:var(--muted)}.cmp .arr{font-size:.9rem;margin-right:3px}.cmp.up .arr{color:var(--danger)}.cmp.down .arr{color:var(--up-green)}
 .price{width:96px;text-align:right;font-family:var(--mono);font-size:.9rem;padding:7px 8px}
+.pq{display:flex;flex-direction:column;gap:6px;align-items:stretch;width:96px}
+.pq .price{width:100%}
+.qty{display:grid;grid-template-columns:28px 1fr 28px;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.qty button{border:0;background:none;color:var(--accent);font:700 1.05rem var(--body);height:30px;cursor:pointer;padding:0}
+.qty button:disabled{color:var(--muted);opacity:.5}
+.qty input{border:0;border-radius:0;padding:4px 0;text-align:center;font-family:var(--mono);font-size:.9rem;background:transparent;width:100%}
+@media (max-width:430px){.pq{width:88px}}
 .del{border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;border-radius:8px;height:30px}
 .del:hover{color:var(--danger)}
 .empty{border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
@@ -358,7 +365,14 @@ function render(){
       p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
       const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Remover "+it.nome);
       d.onclick=()=>{items=items.filter(x=>x.id!==it.id);render();delItem(it.id);toast("Removido: "+it.nome)};
-      r.append(b,n,p,d);box.append(r);
+      const pq=el("div","pq");const q=el("div","qty");
+      const minus=el("button",null,"−");minus.type="button";minus.setAttribute("aria-label","Diminuir quantidade de "+it.nome);minus.disabled=(it.qtd||1)<=1;
+      const qi=el("input");qi.id="q_"+it.id;qi.type="number";qi.min="1";qi.inputMode="numeric";qi.value=it.qtd||1;qi.setAttribute("aria-label","Quantidade de "+it.nome);
+      const plus=el("button",null,"+");plus.type="button";plus.setAttribute("aria-label","Aumentar quantidade de "+it.nome);
+      const setQ=v=>{v=Math.max(1,Math.min(999,parseInt(v)||1));if(v===it.qtd)return render();it.qtd=v;render();putItem(it)};
+      minus.onclick=()=>setQ((it.qtd||1)-1);plus.onclick=()=>setQ((it.qtd||1)+1);qi.onchange=()=>setQ(qi.value);
+      q.append(minus,qi,plus);pq.append(p,q);
+      r.append(b,n,pq,d);box.append(r);
     }
     list.append(box);
   }
