@@ -263,7 +263,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">14</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -477,9 +477,26 @@ const NUM={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8
 const CONT="litros?|quilos?|kilos?|kg|pacotes?|caixas?|latas?|garrafas?|unidades?|potes?|sacos?|saquinhos?|fardos?|duzias?|bandejas?|vidros?|caixinhas?|embalagens?|rolos?|frascos?|pecas?|maços?|macos?";
 function numWord(w){return /^\d+$/.test(w)?parseInt(w):NUM[norm(w)]}
 /* "2 pacotes de arroz de 5 kilos 25,90 cada" -> {nome:"Arroz 5 kg", qtd:2, preco:25.90} */
+/* números por extenso -> dígitos ("treze e oitenta" -> "13 e 80", "vinte e cinco" -> "25") */
+const NW={zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezasseis:16,dezessete:17,dezoito:18,dezenove:19,
+  vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90,cem:100,cento:100,duzentos:200,duzentas:200,trezentos:300,trezentas:300,quatrocentos:400,quinhentos:500,seiscentos:600,setecentos:700,oitocentos:800,novecentos:900};
+function wordsToDigits(txt){
+  const toks=txt.split(/(\s+|,|\.)/);const out=[];
+  const val=t=>{const k=norm(t);return Object.prototype.hasOwnProperty.call(NW,k)?NW[k]:null};
+  const canJoin=(acc,v)=>{if(acc>=100&&acc%100===0&&v<100)return true;if(acc>=20&&acc<100&&acc%10===0&&v<10)return true;if(acc>100&&acc%100>=20&&acc%10===0&&v<10)return true;return false};
+  for(let i=0;i<toks.length;i++){
+    const v=val(toks[i]);
+    if(v==null){out.push(toks[i]);continue}
+    let acc=v,j=i;
+    // tenta juntar "e <número>"
+    while(true){const sp1=toks[j+1],e=toks[j+2],sp2=toks[j+3],nx=toks[j+4];
+      if(sp1&&/^\s+$/.test(sp1)&&e&&norm(e)==="e"&&sp2&&/^\s+$/.test(sp2)&&nx!=null){const nv=val(nx);if(nv!=null&&canJoin(acc,nv)){acc+=nv;j+=4;continue}}
+      break}
+    out.push(String(acc));i=j}
+  return out.join("")}
 function parseOne(x){
   let q=1,preco=null;
-  x=x.replace(/\s+/g," ").trim();
+  x=x.replace(/\s+/g," ").trim().replace(/r\$\s*(\d)/gi,"R$ $1").replace(/(\d+)\s*reais\s*(?:e|com)\s*(\d{1,2})\s*(?:centavos)?/gi,(m,r,c)=>r+","+c.padStart(2,"0")).replace(/(^|\s)(\d{1,2})\s*centavos\b/gi,(m,a,c)=>a+"0,"+c.padStart(2,"0")).replace(/(\d+)\s*reais\b/gi,"$1,00");
   // preço: "R$ 25,90", "25,90 cada", "por 25 reais e 90", "a 7 reais", "25.90"
   const pr=x.match(/(?:^|\s+)(?:(?:a|por|custando|preço|preco)\s+)?(?:r\$\s*)?(\d+)(?:[.,](\d{1,2})|\s*reais(?:\s*(?:e|com)\s*(\d{1,2})(?:\s*centavos)?)?)\s*(?:reais)?\s*(?:cada(?: uma?)?|a unidade|o (?:pacote|quilo|kg|litro|unidade)|cada pacote|a peça|a peca)?\s*$/i);
   if(pr&&(pr[2]!=null||/reais|r\$|cada|unidade|pacote|por |a /i.test(pr[0]))){
@@ -499,9 +516,10 @@ function parseOne(x){
   return {nome:x.slice(0,60),qtd:q,preco};
 }
 function parseSpoken(txt){
+  txt=wordsToDigits(txt);
   // protege preços ("25,90", "25 reais e 90") antes de separar os itens
   const safe=txt.replace(/(\d)[,.](\d)/g,"$1\u0001$2").replace(/\b(\d+)\s+e\s+(\d{1,2})(?:\s*centavos)?(?=\s*(?:reais|cada|o |a |,|;|\.|\n|$| e | mais ))/gi,(m,r,c)=>r+"\u0001"+c.padStart(2,"0")).replace(/(reais)\s+e\s+(\d)/gi,"$1\u0002$2");
-  return safe.split(/,|;|\.| e | mais |\n/i).map(x=>x.replace(/\u0001/g,",").replace(/\u0002/g," e ").trim()).filter(Boolean).map(parseOne).filter(i=>i.nome)}
+  return safe.split(/,|;|\.| e | mais |\n/i).map(x=>x.replace(/\u0001/g,",").replace(/\u0002/g," e ").trim()).filter(Boolean).map(parseOne).reduce((acc,it)=>{if(!it.nome&&it.preco!=null&&acc.length&&acc[acc.length-1].preco==null)acc[acc.length-1].preco=it.preco;else if(it.nome&&!/^\d+([.,]\d+)?$/.test(it.nome))acc.push(it);else if(it.nome&&acc.length&&acc[acc.length-1].preco==null&&/^\d+[.,]\d{1,2}$/.test(it.nome))acc[acc.length-1].preco=parseBRL(it.nome);return acc},[])}
 function addMany(txt,cat){const list=parseSpoken(txt);for(const it of list)addItem(it.nome,cat||guessCat(it.nome),it.qtd,it.preco);
   if(list.length>1)toast(list.length+" itens adicionados")}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false;
