@@ -263,7 +263,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Versão do app: <strong id="appVer">14</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">15</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -355,10 +355,6 @@ function render(){
         if(it.preco!=null){const d=Math.round((it.preco-lp.preco)*100)/100;const pc=lp.preco?Math.round(d/lp.preco*100):0;
           const badge=(cls,arr,txt)=>{const x=el("span","cmp "+cls);x.append(el("span","arr",arr),document.createTextNode(txt));return x};
           n.append(d>0?badge("up","▲",brl(d)+" mais caro ("+pc+"%)"):d<0?badge("down","▼",brl(-d)+" mais barato ("+(-pc)+"%)"):badge("eq","=","mesmo preço"))}}
-      const sp=sitePrice(it.nome);
-      if(sp){for(const [loja,o] of Object.entries(sp.lojas||{})){const x=el("span","site");const a=el("a",null,loja+" hoje: "+brl(o.preco));
-          if(typeof o.url==="string"&&o.url.startsWith("https://")){a.href=o.url;a.target="_blank";a.rel="noopener"}
-          x.append(a,document.createTextNode(" · "+(o.produto||"")));n.append(x)}}
       {const tl=el("span","itot");tl.append(el("span",null,"Total: "),el("strong","money",it.preco!=null?brl(it.preco*(it.qtd||1)):"–"));n.append(tl)}
       const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder=lp?fmtIn(lp.preco):"R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
       p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
@@ -389,12 +385,6 @@ function lastPrice(nome){const k=norm(nome);let best=null;
   for(const t of trips)for(const i of (t.itens||[]))if(i.preco!=null&&norm(i.nome)===k&&(!best||t.data>best.data))best={preco:i.preco,data:t.data,mercado:t.mercado||""};
   return best}
 /* último preço de cada produto em cada mercado */
-let sitePrices={};let sitePricesAt=null;
-const skey=t=>norm(t).replace(/(\d)\s*(kg|g|ml|l|un|rolos?)\b/g,"$1$2");
-function sitePrice(nome){return sitePrices[skey(nome)]||null}
-async function loadSitePrices(){try{const r=await fetch("precos.json",{cache:"no-cache"});if(!r.ok)return;const j=await r.json();
-  const m={};for(const e of Object.values(j.produtos||{}))if(e&&e.nome&&e.lojas&&Object.keys(e.lojas).length)m[skey(e.nome)]=e;
-  sitePrices=m;sitePricesAt=j.atualizado||null;render()}catch(e){}}
 function priceMap(){const m={};
   for(const t of [...trips].sort((a,b)=>a.data.localeCompare(b.data))){if(!t.mercado)continue;const ms=t.mercado.trim();
     for(const i of (t.itens||[])){if(i.preco==null)continue;const k=norm(i.nome);m[k]=m[k]||{nome:i.nome,lojas:{}};m[k].nome=i.nome;m[k].lojas[ms]=i.preco}}
@@ -691,7 +681,6 @@ $("repShare").onclick=async()=>{if(!repTrip)return;const text=reportText(repTrip
 function bootLocal(){mode="local";items=LS.get("items",[]);trips=LS.get("trips",[]);budget=LS.get("budget",null);$("budget").value=budget?fmtIn(budget):"";render()}
 bootLocal();
 setTab(tab);
-loadSitePrices();
 window.addEventListener("storage",()=>bootLocal());
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
