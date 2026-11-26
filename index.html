@@ -49,6 +49,8 @@ form.add{display:grid;grid-template-columns:2fr 1.3fr;gap:8px}
 .store{display:flex;flex-direction:column;gap:8px}
 .store label{font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.07em}
 .store input{font-size:1.05rem;font-weight:600}
+.itot{display:block;margin-top:3px;font-size:.82rem;color:var(--muted)}
+.itot strong{color:var(--fg);font-size:.9rem}
 .sites{display:flex;gap:8px;white-space:nowrap;flex-wrap:wrap;margin-top:3px;font-size:.76rem}
 .sites a{color:var(--accent);font-weight:600;text-decoration:none}
 .sites a:hover{text-decoration:underline}
@@ -301,7 +303,6 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const SITES=[["Atacadão","https://www.atacadao.com.br/s?q="],["Carrefour","https://mercado.carrefour.com.br/s?q="]];
 const CATS=["Hortifruti","Carnes e peixes","Frios e laticínios","Padaria","Mercearia","Bebidas","Limpeza","Higiene","Pet","Outros"];
 const brl=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const parseBRL=s=>{if(s==null)return null;s=String(s).trim().replace(/[R$\s]/g,"");if(!s)return null;if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const n=parseFloat(s);return isFinite(n)&&n>=0?Math.round(n*100)/100:null};
@@ -358,9 +359,7 @@ function render(){
       if(sp){for(const [loja,o] of Object.entries(sp.lojas||{})){const x=el("span","site");const a=el("a",null,loja+" hoje: "+brl(o.preco));
           if(typeof o.url==="string"&&o.url.startsWith("https://")){a.href=o.url;a.target="_blank";a.rel="noopener"}
           x.append(a,document.createTextNode(" · "+(o.produto||"")));n.append(x)}}
-      if(!it.ok){const sl=el("span","sites");sl.append(el("span",null,"Ver no site:"));
-        for(const [nm,base] of SITES){const a=el("a",null,nm+" ↗");a.href=base+encodeURIComponent(it.nome.replace(/\b\d+\s*(un|unid)\b/gi,"").trim());a.target="_blank";a.rel="noopener";sl.append(a)}
-        n.append(sl)}
+      {const tl=el("span","itot");tl.append(el("span",null,"Total: "),el("strong","money",it.preco!=null?brl(it.preco*(it.qtd||1)):"–"));n.append(tl)}
       const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder=lp?fmtIn(lp.preco):"R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
       p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
       const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Remover "+it.nome);
