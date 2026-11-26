@@ -1,13 +1,13 @@
 {
- "atualizado": "2026-11-26T11:32:13+00:00",
+ "atualizado": "2026-11-26T11:44:01+00:00",
  "produtos": {
   "arroz 5 kg": {
    "nome": "Arroz 5 kg",
    "lojas": {
     "Atacadão": {
-     "produto": "Arroz Bulnez Agulhinha Tipo 1 1kg",
-     "preco": 4.19,
-     "url": "https://www.atacadao.com.br/arroz-bulnez-agulhinha-tipo-1-14109/p"
+     "produto": "Arroz Extremo Sul Agulhinha - Tipo 1 5kg",
+     "preco": 18.99,
+     "url": "https://www.atacadao.com.br/arroz-extremo-sul-agulhinha---tipo-1-7946/p"
     }
    }
   },
@@ -25,9 +25,9 @@
    "nome": "Café 500 g",
    "lojas": {
     "Atacadão": {
-     "produto": "Mexedor de Café Bio Goldenplast 500 un",
-     "preco": 6.49,
-     "url": "https://www.atacadao.com.br/mexedor-de-cafe-bio-goldenplast-98227/p"
+     "produto": "Café Jardim Tradicional Pouch 500g",
+     "preco": 16.9,
+     "url": "https://www.atacadao.com.br/cafe-jardim-tradicional-16618/p"
     }
    }
   },
@@ -45,21 +45,15 @@
    "nome": "Açúcar 5 kg",
    "lojas": {
     "Atacadão": {
-     "produto": "Açúcar Refinado Bulnez 1kg",
-     "preco": 3.29,
-     "url": "https://www.atacadao.com.br/acucar-refinado-bulnez-14485/p"
+     "produto": "Açúcar Cristalçúcar União Cristal 5kg",
+     "preco": 15.89,
+     "url": "https://www.atacadao.com.br/acucar-cristalcucar-uniao-cristal-2450/p"
     }
    }
   },
   "oleo de soja 900 ml": {
    "nome": "Óleo de soja 900 ml",
-   "lojas": {
-    "Atacadão": {
-     "produto": "Óleo de Milho Veleiro 900ml",
-     "preco": 9.98,
-     "url": "https://www.atacadao.com.br/oleo-de-milho-veleiro-13600/p"
-    }
-   }
+   "lojas": {}
   },
   "detergente 500 ml": {
    "nome": "Detergente 500 ml",
@@ -83,13 +77,14 @@
   }
  },
  "erros": [
-  "Carrefour / Arroz 5 kg: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Feijão carioca 1 kg: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Café 500 g: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Leite integral 1 L: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Açúcar 5 kg: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Óleo de soja 900 ml: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Detergente 500 ml: offers_is: HTTP Error 503: Service Unavailable",
-  "Carrefour / Papel higiênico 12 rolos: offers_is: HTTP Error 503: Service Unavailable"
+  "Carrefour / Arroz 5 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Feijão carioca 1 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Café 500 g: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Leite integral 1 L: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Açúcar 5 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Atacadão / Óleo de soja 900 ml: nenhum dos 50 resultados bate com o nome/tamanho",
+  "Carrefour / Óleo de soja 900 ml: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Detergente 500 ml: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
+  "Carrefour / Papel higiênico 12 rolos: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable"
  ]
 }
