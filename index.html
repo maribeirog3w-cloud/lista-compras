@@ -46,6 +46,13 @@ h2{font-family:var(--display);font-weight:600;font-size:1.2rem;margin:0}
 .btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
 .btn[disabled]{opacity:.5;cursor:default}
 form.add{display:grid;grid-template-columns:2fr 1.3fr;gap:8px}
+.namebox{display:grid;grid-template-columns:1fr 46px;gap:8px;min-width:0}
+.mic{border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:10px;cursor:pointer;display:grid;place-items:center;padding:0}
+.mic svg{width:20px;height:20px}
+.mic.on{background:var(--danger);border-color:var(--danger);color:#fff}
+@media (prefers-reduced-motion:no-preference){.mic.on{animation:pulse 1.2s ease-in-out infinite}}
+@keyframes pulse{50%{opacity:.6}}
+.voicehint{grid-column:1/-1;margin:0;font-size:.82rem;color:var(--muted)}
 form.add .row2{display:grid;grid-template-columns:70px 1fr auto;gap:8px;grid-column:1/-1}
 input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -113,13 +120,17 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
   </section>
 
   <form class="add" id="addForm" autocomplete="off">
-    <input id="fName" placeholder="Item (ex.: arroz 5 kg)" required maxlength="60" aria-label="Nome do item">
+    <div class="namebox">
+      <input id="fName" placeholder="Item (ex.: arroz 5 kg)" required maxlength="200" aria-label="Nome do item">
+      <button class="mic" id="mic" type="button" aria-label="Adicionar por voz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    </div>
     <select id="fCat" aria-label="Categoria"></select>
     <div class="row2">
       <input id="fQty" type="number" min="1" step="1" value="1" aria-label="Quantidade" inputmode="numeric">
       <input id="fPrice" placeholder="Preço unit. (opcional)" inputmode="decimal" aria-label="Preço unitário em reais">
       <button class="btn primary" type="submit">Adicionar</button>
     </div>
+    <p class="voicehint" id="voiceHint" hidden></p>
   </form>
 
   <div id="freqWrap" hidden>
@@ -276,7 +287,44 @@ function addItem(nome,cat,qtd,preco){
 }
 $("fCat").append(...CATS.map(c=>{const o=el("option",null,c);o.value=c;return o}));
 $("fCat").value="Mercearia";
-$("addForm").addEventListener("submit",e=>{e.preventDefault();addItem($("fName").value,$("fCat").value,$("fQty").value,parseBRL($("fPrice").value));
+/* ---------- voz ---------- */
+const KW={"Hortifruti":"banana maca laranja limao tomate cebola alho batata cenoura alface couve brocolis abobora abobrinha pepino pimentao mamao melao melancia uva morango abacate manga verdura legume fruta cheiro-verde coentro salsinha mandioca aipim chuchu beterraba repolho ovo ovos",
+"Carnes e peixes":"carne frango peixe file bife alcatra patinho acem picanha costela linguica salsicha bacon calabresa tilapia sardinha atum moida coxa sobrecoxa peito porco lombo hamburguer",
+"Frios e laticínios":"leite queijo presunto mussarela iogurte manteiga margarina requeijao creme nata peito-de-peru mortadela salame danone",
+"Padaria":"pao paes bolo bisnaguinha torrada rosca",
+"Bebidas":"agua refrigerante suco cerveja vinho coca guarana cha energetico",
+"Limpeza":"detergente sabao amaciante desinfetante agua-sanitaria cloro esponja vassoura alvejante limpador multiuso saco lixo pano veja",
+"Higiene":"sabonete shampoo xampu condicionador pasta creme-dental escova papel higienico desodorante absorvente fralda fio-dental cotonete",
+"Pet":"racao petisco areia gato cachorro"};
+function guessCat(nome){const w=norm(nome).replace(/ de /g," ").split(" ").flatMap(x=>[x,x.replace(/s$/,""),x.replace(/es$/,""),x.replace(/oes$/,"ao"),x.replace(/aes$/,"ao")]);const joined=norm(nome).replace(/ /g,"-");
+  for(const [c,list] of Object.entries(KW)){for(const k of list.split(" ")){if(k.includes("-")?joined.includes(k):w.includes(k))return c}}
+  const lp=trips.flatMap(t=>t.itens||[]).find(i=>norm(i.nome)===norm(nome));return lp?lp.cat:"Mercearia"}
+const NUM={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,doze:12};
+function parseSpoken(txt){
+  return txt.split(/,|;|\.| e | mais |\n/i).map(x=>x.trim()).filter(Boolean).map(x=>{
+    let q=1;const m=x.match(/^(\d+|\p{L}+)\s+(.*)$/u);
+    if(m){const n=/^\d+$/.test(m[1])?parseInt(m[1]):NUM[norm(m[1])];
+      if(n&&!/^(kg|g|l|ml|litros?|quilos?|gramas?|pacotes? de|caixas? de|latas? de|duzias? de)\b/i.test(m[2])){q=n;x=m[2]}}
+    x=x.replace(/^(de |do |da )/i,"");x=x.charAt(0).toUpperCase()+x.slice(1);
+    return {nome:x.slice(0,60),qtd:q}})}
+function addMany(txt,cat){const list=parseSpoken(txt);for(const it of list)addItem(it.nome,cat||guessCat(it.nome),it.qtd,null);
+  if(list.length>1)toast(list.length+" itens adicionados")}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false;
+$("mic").onclick=()=>{
+  const hint=$("voiceHint");
+  if(!SR){hint.textContent="Seu celular não liberou o microfone para este app. Toque no campo do item e use o microfone do teclado. Pode falar vários itens separados por vírgula ou \"e\", como \"arroz, 2 leites e detergente\", e depois toque em Adicionar.";hint.hidden=false;$("fName").focus();return}
+  if(listening){rec&&rec.stop();return}
+  rec=new SR();rec.lang="pt-BR";rec.interimResults=true;rec.continuous=false;
+  rec.onstart=()=>{listening=true;$("mic").classList.add("on");hint.textContent="Ouvindo… fale os itens, por exemplo: \"arroz, 2 leites e detergente\"";hint.hidden=false};
+  rec.onresult=e=>{let t="";for(const r of e.results)t+=r[0].transcript;$("fName").value=t;
+    if(e.results[e.results.length-1].isFinal){addMany(t);$("fName").value=""}};
+  rec.onerror=e=>{hint.textContent=e.error==="not-allowed"||e.error==="service-not-allowed"?"O microfone foi bloqueado. Toque no campo do item e use o microfone do teclado.":"Não entendi. Toque no microfone e tente de novo.";hint.hidden=false};
+  rec.onend=()=>{listening=false;$("mic").classList.remove("on");setTimeout(()=>{if(!listening)hint.hidden=true},4000)};
+  try{rec.start()}catch(err){hint.textContent="Não consegui ligar o microfone. Use o microfone do teclado.";hint.hidden=false}
+};
+
+$("addForm").addEventListener("submit",e=>{e.preventDefault();const v=$("fName").value;
+  if(/,| e /.test(v)&&parseSpoken(v).length>1&&/,/.test(v)){addMany(v,null)}else addItem(v,$("fCat").value,$("fQty").value,parseBRL($("fPrice").value));
   $("fName").value="";$("fPrice").value="";$("fQty").value=1;$("fName").focus()});
 $("budget").addEventListener("change",()=>{budget=parseBRL($("budget").value);$("budget").value=budget?fmtIn(budget):"";render();putBudget()});
 
