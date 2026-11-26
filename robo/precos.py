@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 
 SITES = {
     "Atacadão": "https://www.atacadao.com.br",
-    "Carrefour": "https://mercado.carrefour.com.br",
 }
+# O Carrefour bloqueia consultas automáticas (erro 503), por isso ficou de fora.
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
       "Accept": "application/json, text/plain, */*", "Accept-Language": "pt-BR,pt;q=0.9"}
 STOP = {"de", "do", "da", "com", "e", "tipo", "integral"}  # "integral" fica opcional
