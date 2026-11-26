@@ -16,17 +16,17 @@
 /* Layout: one column "feira" app; sticky total bar on top, list grouped by category, history below */
 :root{
   --bg:#f3f5ef; --surface:#ffffff; --fg:#1c2419; --muted:#5e6b59; --line:#dbe1d3;
-  --accent:#2f6b3a; --accent-ink:#ffffff; --accent-soft:#e1eedc; --warn:#b4531f; --danger:#b3261e;
+  --accent:#2f6b3a; --accent-ink:#ffffff; --accent-soft:#e1eedc; --warn:#b4531f; --danger:#c62828; --up-green:#1e8e3e;
   --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body:"Figtree", system-ui, -apple-system, sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#141912; --surface:#1d241b; --fg:#e7ece2; --muted:#9aa893; --line:#2f392c;
-  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ef7f77; color-scheme:dark}}
+  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ff6b6b; --up-green:#4cd964; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#141912; --surface:#1d241b; --fg:#e7ece2; --muted:#9aa893; --line:#2f392c;
-  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ef7f77; color-scheme:dark}
+  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ff6b6b; --up-green:#4cd964; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
@@ -62,7 +62,7 @@ input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surfac
 .name{min-width:0;overflow-wrap:anywhere}
 .name small{display:block;color:var(--muted);font-size:.78rem}
 .cmp{display:inline-block;margin-top:3px;font-size:.74rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--accent-soft)}
-.cmp.up{color:var(--warn)}.cmp.down{color:var(--accent)}.cmp.eq{color:var(--muted)}
+.cmp{color:var(--fg)}.cmp.eq{color:var(--muted)}.cmp .arr{font-size:.9rem;margin-right:3px}.cmp.up .arr{color:var(--danger)}.cmp.down .arr{color:var(--up-green)}
 .price{width:96px;text-align:right;font-family:var(--mono);font-size:.9rem;padding:7px 8px}
 .del{border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;border-radius:8px;height:30px}
 .del:hover{color:var(--danger)}
@@ -219,7 +219,8 @@ function render(){
       const lp=lastPrice(it.nome);
       if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")));
         if(it.preco!=null){const d=Math.round((it.preco-lp.preco)*100)/100;const pc=lp.preco?Math.round(d/lp.preco*100):0;
-          n.append(d>0?el("span","cmp up","▲ "+brl(d)+" mais caro ("+pc+"%)"):d<0?el("span","cmp down","▼ "+brl(-d)+" mais barato ("+(-pc)+"%)"):el("span","cmp eq","= mesmo preço"))}}
+          const badge=(cls,arr,txt)=>{const x=el("span","cmp "+cls);x.append(el("span","arr",arr),document.createTextNode(txt));return x};
+          n.append(d>0?badge("up","▲",brl(d)+" mais caro ("+pc+"%)"):d<0?badge("down","▼",brl(-d)+" mais barato ("+(-pc)+"%)"):badge("eq","=","mesmo preço"))}}
       const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder=lp?fmtIn(lp.preco):"R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
       p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
       const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Remover "+it.nome);
