@@ -103,6 +103,14 @@ form.add{display:grid;grid-template-columns:2fr 1.3fr;gap:8px}
 .rbox{border-radius:12px;padding:12px;background:var(--accent-soft);margin-top:10px}
 .rbox.good strong{color:var(--up-green)}.rbox.bad strong{color:var(--danger)}
 .hrow .open{border:0;background:none;color:var(--fg);font:inherit;text-align:left;padding:0;cursor:pointer}
+.fin{display:flex;flex-direction:column;gap:8px}
+.finrow{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.finrow.disc strong{color:var(--up-green)}
+.discrow{display:grid;grid-template-columns:1fr auto;gap:8px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--surface);color:var(--fg);font:600 .9rem var(--body);padding:0 14px;cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+#dTotal{font-size:1.15rem}
 .namebox{display:grid;grid-template-columns:1fr 46px;gap:8px;min-width:0}
 .mic{border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:10px;cursor:pointer;display:grid;place-items:center;padding:0}
 .mic svg{width:20px;height:20px}
@@ -226,6 +234,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
     <div class="kpi big"><span class="lbl">Gasto no mês</span><span class="val" id="dTot">R$ 0,00</span><span class="kvs" id="dTotVs"></span></div>
     <div class="kpi"><span class="lbl">Compras</span><span class="val" id="dCnt">0</span></div>
     <div class="kpi"><span class="lbl">Ticket médio</span><span class="val" id="dAvg">R$ 0,00</span></div>
+    <div class="kpi" style="grid-column:1/-1"><span class="lbl">Descontos no mês</span><span class="val good" id="dDescM">R$ 0,00</span></div>
     <div class="kpi" style="grid-column:1/-1"><span class="lbl">Valeu a pena?</span><span class="val" id="dEco">–</span><small id="dEcoSub"></small></div>
   </div>
   <section class="panel" id="dBudget" hidden>
@@ -263,7 +272,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Versão do app: <strong id="appVer">17</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">18</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -290,8 +299,20 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 <dialog id="dlg">
   <h2>Finalizar compra</h2>
   <p id="dlgText"></p>
-  <label class="note" for="dTotal">Valor pago (confira no cupom):</label>
-  <input id="dTotal" inputmode="decimal">
+  <div class="fin">
+    <div class="finrow"><span>Subtotal dos itens</span><strong class="money" id="dSub">R$ 0,00</strong></div>
+    <label class="note" for="dDisc">Desconto na compra:</label>
+    <div class="discrow">
+      <input id="dDisc" inputmode="decimal" placeholder="0,00">
+      <div class="seg" role="group" aria-label="Tipo de desconto">
+        <button type="button" id="dModeR" class="on" aria-pressed="true">R$</button>
+        <button type="button" id="dModeP" aria-pressed="false">%</button>
+      </div>
+    </div>
+    <div class="finrow disc" id="dDiscRow" hidden><span>Desconto</span><strong class="money" id="dDiscVal"></strong></div>
+    <label class="note" for="dTotal">Valor pago (confira no cupom):</label>
+    <input id="dTotal" inputmode="decimal" class="money">
+  </div>
   <label class="note" for="dStore" style="display:block;margin-top:8px">Mercado (opcional):</label>
   <input id="dStore" maxlength="40" placeholder="ex.: Atacadão">
   <div class="acts">
@@ -537,14 +558,25 @@ $("addForm").addEventListener("submit",e=>{e.preventDefault();const v=$("fName")
 $("budget").addEventListener("change",()=>{budget=parseBRL($("budget").value);$("budget").value=budget?fmtIn(budget):"";render();putBudget()});
 
 const dlg=$("dlg");
+let discMode="R",totalTouched=false;
+function finSub(){return items.filter(i=>i.ok).reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0)}
+function discAmount(sub){const v=parseBRL($("dDisc").value)||0;const d=discMode==="P"?sub*Math.min(v,100)/100:Math.min(v,sub);return Math.round(d*100)/100}
+function updFin(){const sub=finSub();$("dSub").textContent=brl(sub);const d=discAmount(sub);
+  $("dDiscRow").hidden=!d;$("dDiscVal").textContent="− "+brl(d)+(discMode==="P"&&d?" ("+(parseBRL($("dDisc").value)||0).toLocaleString("pt-BR")+"%)":"");
+  if(!totalTouched)$("dTotal").value=fmtIn(Math.max(0,sub-d))}
+function setDiscMode(m){discMode=m;$("dModeR").classList.toggle("on",m==="R");$("dModeP").classList.toggle("on",m==="P");
+  $("dModeR").setAttribute("aria-pressed",m==="R");$("dModeP").setAttribute("aria-pressed",m==="P");$("dDisc").placeholder=m==="P"?"ex.: 5":"0,00";updFin()}
+$("dModeR").onclick=()=>setDiscMode("R");$("dModeP").onclick=()=>setDiscMode("P");
+$("dDisc").addEventListener("input",updFin);$("dTotal").addEventListener("input",()=>totalTouched=true);
 $("finish").onclick=()=>{const ok=items.filter(i=>i.ok);const est=ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
   $("dlgText").textContent=`${ok.length} itens marcados vão para o histórico e saem da lista. Os ${items.length-ok.length} não marcados continuam para a próxima compra.`;
-  $("dTotal").value=fmtIn(est);$("dStore").value=store;if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
+  totalTouched=false;$("dDisc").value="";setDiscMode("R");$("dTotal").value=fmtIn(est);$("dStore").value=store;if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
 $("dCancel").onclick=()=>dlg.close();
 $("dOk").onclick=async()=>{
-  const ok=items.filter(i=>i.ok);const total=parseBRL($("dTotal").value)??ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
+  const ok=items.filter(i=>i.ok);const sub=Math.round(finSub()*100)/100;const desc=discAmount(sub);
+  const total=parseBRL($("dTotal").value)??Math.max(0,sub-desc);
   const now=new Date();
-  const t={id:uid(),data:now.toISOString(),mes:monthKey(now),total,mercado:$("dStore").value.trim().slice(0,40),
+  const t={id:uid(),data:now.toISOString(),mes:monthKey(now),total,subtotal:sub,desconto:desc,mercado:$("dStore").value.trim().slice(0,40),
     itens:ok.map(i=>({nome:i.nome,cat:i.cat,qtd:i.qtd,preco:i.preco}))};
   trips.push(t);if(t.mercado&&!store)setStore(t.mercado);items=items.filter(i=>!i.ok);dlg.close();render();openReport(t);
   await putTrip(t);for(const i of ok)await delItem(i.id);
@@ -600,7 +632,8 @@ function renderDash(){
   const vs=$("dTotVs");vs.className="kvs";
   if(prevTot>0){const pc=Math.round((tot-prevTot)/prevTot*100);vs.textContent=(pc>0?"▲ ":pc<0?"▼ ":"= ")+Math.abs(pc)+"% vs mês anterior ("+brl(prevTot)+")";vs.classList.add(pc>0?"up":pc<0?"down":"eq")}
   else vs.textContent=mt.length?"Primeiro mês com compras registradas":"";
-  $("dCnt").textContent=mt.length;$("dAvg").textContent=brl(mt.length?tot/mt.length:0);
+  const descM=mt.reduce((s,t)=>s+(t.desconto||0),0);
+  $("dCnt").textContent=mt.length;$("dDescM").textContent=brl(descM);$("dAvg").textContent=brl(mt.length?tot/mt.length:0);
   const allD=mt.flatMap(tripDeltas);const net=allD.reduce((s,d)=>s+d.impacto,0);
   const eco=$("dEco");eco.textContent=allD.length?(net<0?"Economizou "+brl(-net):net>0?"Pagou "+brl(net)+" a mais":"Empatou"):"–";
   eco.className="val "+(net<0?"good":net>0?"bad":"");
@@ -647,6 +680,7 @@ let repTrip=null;
 function openReport(t){repTrip=t;const box=$("repBody");box.replaceChildren();
   const d=tripDeltas(t);const its=t.itens||[];
   $("repTitle").textContent="Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"});
+  if(t.desconto>0){const dd=el("div","rbox good");dd.append(el("strong",null,"Desconto de "+brl(t.desconto)),el("div","note","Subtotal "+brl(t.subtotal)+" − desconto "+brl(t.desconto)+" = pago "+brl(t.total)));setTimeout(()=>{const h=box.querySelector(".rhead");if(h)h.after(dd)},0)}
   const head=el("div","rhead");head.append(el("div","rtot money",brl(t.total)),el("div","note",(t.mercado?t.mercado+" · ":"")+its.length+" itens · "+fmtDate(t.data,{weekday:"long"})));box.append(head);
   // mês
   const mTot=trips.filter(x=>x.mes===t.mes).reduce((s,x)=>s+x.total,0);
@@ -670,7 +704,7 @@ function openReport(t){repTrip=t;const box=$("repBody");box.replaceChildren();
   if(Math.abs(soma-t.total)>0.009&&soma>0)box.append(el("p","note","Soma dos itens com preço: "+brl(soma)+". Valor pago: "+brl(t.total)+"."));
   const rd=$("rep");if(rd.showModal)rd.showModal();else rd.setAttribute("open","")}
 function reportText(t){const d=tripDeltas(t);const s=d.reduce((a,b)=>a+b.impacto,0);
-  let x="🛒 Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"})+(t.mercado?" no "+t.mercado:"")+"\nTotal: "+brl(t.total)+" · "+(t.itens||[]).length+" itens\n";
+  let x="🛒 Compra de "+fmtDate(t.data,{day:"2-digit",month:"long"})+(t.mercado?" no "+t.mercado:"")+"\n"+(t.desconto>0?"Subtotal: "+brl(t.subtotal)+" · Desconto: "+brl(t.desconto)+"\n":"")+"Total: "+brl(t.total)+" · "+(t.itens||[]).length+" itens\n";
   if(d.length)x+=(s<0?"Economia de "+brl(-s):s>0?"Pagou "+brl(s)+" a mais":"Mesmos preços")+" vs compra anterior\n";
   x+="\n"+(t.itens||[]).map(i=>"• "+i.nome+(i.qtd>1?" ("+i.qtd+")":"")+(i.preco!=null?" — "+brl(i.preco*(i.qtd||1)):"")).join("\n");return x}
 $("repClose").onclick=()=>$("rep").close();
