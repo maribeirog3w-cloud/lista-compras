@@ -299,15 +299,36 @@ const KW={"Hortifruti":"banana maca laranja limao tomate cebola alho batata ceno
 function guessCat(nome){const w=norm(nome).replace(/ de /g," ").split(" ").flatMap(x=>[x,x.replace(/s$/,""),x.replace(/es$/,""),x.replace(/oes$/,"ao"),x.replace(/aes$/,"ao")]);const joined=norm(nome).replace(/ /g,"-");
   for(const [c,list] of Object.entries(KW)){for(const k of list.split(" ")){if(k.includes("-")?joined.includes(k):w.includes(k))return c}}
   const lp=trips.flatMap(t=>t.itens||[]).find(i=>norm(i.nome)===norm(nome));return lp?lp.cat:"Mercearia"}
-const NUM={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,doze:12};
+const NUM={um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,quinze:15,vinte:20,trinta:30};
+const CONT="litros?|quilos?|kilos?|kg|pacotes?|caixas?|latas?|garrafas?|unidades?|potes?|sacos?|saquinhos?|fardos?|duzias?|bandejas?|vidros?|caixinhas?|embalagens?|rolos?|frascos?|pecas?|maços?|macos?";
+function numWord(w){return /^\d+$/.test(w)?parseInt(w):NUM[norm(w)]}
+/* "2 pacotes de arroz de 5 kilos 25,90 cada" -> {nome:"Arroz 5 kg", qtd:2, preco:25.90} */
+function parseOne(x){
+  let q=1,preco=null;
+  x=x.replace(/\s+/g," ").trim();
+  // preço: "R$ 25,90", "25,90 cada", "por 25 reais e 90", "a 7 reais", "25.90"
+  const pr=x.match(/\s*(?:(?:a|por|custando|preço|preco)\s+)?(?:r\$\s*)?(\d+)(?:[.,](\d{1,2})|\s*reais(?:\s*(?:e|com)\s*(\d{1,2})(?:\s*centavos)?)?)\s*(?:reais)?\s*(?:cada(?: uma?)?|a unidade|o (?:pacote|quilo|kg|litro|unidade)|cada pacote|a peça|a peca)?\s*$/i);
+  if(pr&&(pr[2]!=null||/reais|r\$|cada|unidade|pacote|por |a /i.test(pr[0]))){
+    const cents=pr[2]!=null?pr[2]:(pr[3]||"0");preco=parseFloat(pr[1]+"."+cents.padEnd(2,"0"));
+    x=x.slice(0,pr.index).trim();
+  }
+  // quantidade inicial: "2 arroz", "dois pacotes de arroz", "3 latas de leite condensado"
+  const m=x.match(new RegExp("^(\\d+|\\p{L}+)\\s+(?:(?:"+CONT+")\\s+(?:de|do|da)\\s+)?(.*)$","iu"));
+  if(m){const n=numWord(m[1]);const rest=m[2];
+    if(n&&rest&&!/^(kg|g|l|ml|litros?|quilos?|kilos?|gramas?)\b/i.test(rest)){q=n;x=rest}}
+  // tamanhos: "de 5 kilos" -> "5 kg"
+  x=x.replace(/\b(?:de|com)\s+(\d+(?:[.,]\d+)?|\p{L}+)\s*(quilos?|kilos?|kg|gramas?|g|litros?|l|ml|mililitros?)\b/giu,(a,n,u)=>" "+(numWord(n)||n)+" "+u)
+     .replace(/\b(quilos?|kilos?)\b/gi,"kg").replace(/\b(gramas?)\b/gi,"g").replace(/\blitros?\b/gi,"L").replace(/\bmililitros?\b/gi,"ml")
+     .replace(/\b(meio|meia)\s+kg\b/gi,"500 g").replace(/(\d)\s+(kg|g|L|ml)\b/g,"$1 $2")
+     .replace(/\s+/g," ").trim().replace(/^(de|do|da)\s+/i,"");
+  x=x.charAt(0).toUpperCase()+x.slice(1);
+  return {nome:x.slice(0,60),qtd:q,preco};
+}
 function parseSpoken(txt){
-  return txt.split(/,|;|\.| e | mais |\n/i).map(x=>x.trim()).filter(Boolean).map(x=>{
-    let q=1;const m=x.match(/^(\d+|\p{L}+)\s+(.*)$/u);
-    if(m){const n=/^\d+$/.test(m[1])?parseInt(m[1]):NUM[norm(m[1])];
-      if(n&&!/^(kg|g|l|ml|litros?|quilos?|gramas?|pacotes? de|caixas? de|latas? de|duzias? de)\b/i.test(m[2])){q=n;x=m[2]}}
-    x=x.replace(/^(de |do |da )/i,"");x=x.charAt(0).toUpperCase()+x.slice(1);
-    return {nome:x.slice(0,60),qtd:q}})}
-function addMany(txt,cat){const list=parseSpoken(txt);for(const it of list)addItem(it.nome,cat||guessCat(it.nome),it.qtd,null);
+  // protege preços ("25,90", "25 reais e 90") antes de separar os itens
+  const safe=txt.replace(/(\d)[,.](\d)/g,"$1\u0001$2").replace(/(reais)\s+e\s+(\d)/gi,"$1\u0002$2");
+  return safe.split(/,|;|\.| e | mais |\n/i).map(x=>x.replace(/\u0001/g,",").replace(/\u0002/g," e ").trim()).filter(Boolean).map(parseOne).filter(i=>i.nome)}
+function addMany(txt,cat){const list=parseSpoken(txt);for(const it of list)addItem(it.nome,cat||guessCat(it.nome),it.qtd,it.preco);
   if(list.length>1)toast(list.length+" itens adicionados")}
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false;
 $("mic").onclick=()=>{
@@ -323,9 +344,12 @@ $("mic").onclick=()=>{
   try{rec.start()}catch(err){hint.textContent="Não consegui ligar o microfone. Use o microfone do teclado.";hint.hidden=false}
 };
 
+let catTouched=false;$("fCat").addEventListener("change",()=>catTouched=true);
 $("addForm").addEventListener("submit",e=>{e.preventDefault();const v=$("fName").value;
-  if(/,| e /.test(v)&&parseSpoken(v).length>1&&/,/.test(v)){addMany(v,null)}else addItem(v,$("fCat").value,$("fQty").value,parseBRL($("fPrice").value));
-  $("fName").value="";$("fPrice").value="";$("fQty").value=1;$("fName").focus()});
+  const list=parseSpoken(v);const fPrice=parseBRL($("fPrice").value);const fQty=parseInt($("fQty").value)||1;
+  if(list.length>1){addMany(v,catTouched?$("fCat").value:null)}
+  else if(list.length===1){const it=list[0];addItem(it.nome,catTouched?$("fCat").value:guessCat(it.nome),fQty>1?fQty:it.qtd,fPrice!=null?fPrice:it.preco)}
+  $("fName").value="";$("fPrice").value="";$("fQty").value=1;$("fCat").value="Mercearia";catTouched=false;$("fName").focus()});
 $("budget").addEventListener("change",()=>{budget=parseBRL($("budget").value);$("budget").value=budget?fmtIn(budget):"";render();putBudget()});
 
 const dlg=$("dlg");
