@@ -61,6 +61,8 @@ input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surfac
 .item.done .name{text-decoration:line-through;color:var(--muted)}
 .name{min-width:0;overflow-wrap:anywhere}
 .name small{display:block;color:var(--muted);font-size:.78rem}
+.cmp{display:inline-block;margin-top:3px;font-size:.74rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--accent-soft)}
+.cmp.up{color:var(--warn)}.cmp.down{color:var(--accent)}.cmp.eq{color:var(--muted)}
 .price{width:96px;text-align:right;font-family:var(--mono);font-size:.9rem;padding:7px 8px}
 .del{border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;border-radius:8px;height:30px}
 .del:hover{color:var(--danger)}
@@ -214,7 +216,11 @@ function render(){
       b.onclick=()=>{it.ok=!it.ok;render();putItem(it)};
       const n=el("div","name",it.nome);
       n.append(el("small",null,(it.qtd>1?it.qtd+" un · ":"")+(it.preco!=null?brl(it.preco)+" cada":"sem preço")));
-      const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder="R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
+      const lp=lastPrice(it.nome);
+      if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")));
+        if(it.preco!=null){const d=Math.round((it.preco-lp.preco)*100)/100;const pc=lp.preco?Math.round(d/lp.preco*100):0;
+          n.append(d>0?el("span","cmp up","▲ "+brl(d)+" mais caro ("+pc+"%)"):d<0?el("span","cmp down","▼ "+brl(-d)+" mais barato ("+(-pc)+"%)"):el("span","cmp eq","= mesmo preço"))}}
+      const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder=lp?fmtIn(lp.preco):"R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
       p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
       const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Remover "+it.nome);
       d.onclick=()=>{items=items.filter(x=>x.id!==it.id);render();delItem(it.id);toast("Removido: "+it.nome)};
@@ -231,6 +237,10 @@ function renderFreq(){
   $("freqWrap").hidden=!top.length;const f=$("freq");f.replaceChildren();
   for(const x of top){const c=el("button","chip","+ "+x.i.nome);c.type="button";c.onclick=()=>addItem(x.i.nome,x.i.cat,1,x.i.preco??null);f.append(c)}
 }
+const norm=t=>String(t||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ");
+function lastPrice(nome){const k=norm(nome);let best=null;
+  for(const t of trips)for(const i of (t.itens||[]))if(i.preco!=null&&norm(i.nome)===k&&(!best||t.data>best.data))best={preco:i.preco,data:t.data};
+  return best}
 function monthKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
 function monthTotal(d){const k=monthKey(d);return trips.filter(t=>t.mes===k).reduce((s,t)=>s+t.total,0)}
 function renderHist(){
