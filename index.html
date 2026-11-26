@@ -487,7 +487,7 @@ function parseOne(x){
 }
 function parseSpoken(txt){
   // protege preços ("25,90", "25 reais e 90") antes de separar os itens
-  const safe=txt.replace(/(\d)[,.](\d)/g,"$1\u0001$2").replace(/(reais)\s+e\s+(\d)/gi,"$1\u0002$2");
+  const safe=txt.replace(/(\d)[,.](\d)/g,"$1\u0001$2").replace(/\b(\d+)\s+e\s+(\d{1,2})(?:\s*centavos)?(?=\s*(?:reais|cada|o |a |,|;|\.|\n|$| e | mais ))/gi,(m,r,c)=>r+"\u0001"+c.padStart(2,"0")).replace(/(reais)\s+e\s+(\d)/gi,"$1\u0002$2");
   return safe.split(/,|;|\.| e | mais |\n/i).map(x=>x.replace(/\u0001/g,",").replace(/\u0002/g," e ").trim()).filter(Boolean).map(parseOne).filter(i=>i.nome)}
 function addMany(txt,cat){const list=parseSpoken(txt);for(const it of list)addItem(it.nome,cat||guessCat(it.nome),it.qtd,it.preco);
   if(list.length>1)toast(list.length+" itens adicionados")}
