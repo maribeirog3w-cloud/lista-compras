@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f6b3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Compras">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Lista de Compras</title>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}img{max-width:100%}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column "feira" app; sticky total bar on top, list grouped by category, history below */
+:root{
+  --bg:#f3f5ef; --surface:#ffffff; --fg:#1c2419; --muted:#5e6b59; --line:#dbe1d3;
+  --accent:#2f6b3a; --accent-ink:#ffffff; --accent-soft:#e1eedc; --warn:#b4531f; --danger:#b3261e;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141912; --surface:#1d241b; --fg:#e7ece2; --muted:#9aa893; --line:#2f392c;
+  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ef7f77; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141912; --surface:#1d241b; --fg:#e7ece2; --muted:#9aa893; --line:#2f392c;
+  --accent:#7cc184; --accent-ink:#0f1a10; --accent-soft:#24361f; --warn:#e59a63; --danger:#ef7f77; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-weight:800;font-size:1.9rem;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-weight:600;font-size:1.2rem;margin:0}
+.sub{color:var(--muted);margin:4px 0 0}
+.money{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:center}
+.bar .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;opacity:.85}
+.bar .val{font-size:1.15rem}
+.bar .budget{font-size:.78rem;opacity:.9}
+.btn{font:600 .9rem var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:10px 14px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bar .btn{background:var(--accent-ink);color:var(--accent);border-color:transparent}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+form.add{display:grid;grid-template-columns:2fr 1.3fr;gap:8px}
+form.add .row2{display:grid;grid-template-columns:70px 1fr auto;gap:8px;grid-column:1/-1}
+input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 .82rem var(--body);background:var(--accent-soft);color:var(--fg);border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
+.chip:hover{outline:1px solid var(--accent)}
+.group{display:flex;flex-direction:column}
+.ghead{display:flex;justify-content:space-between;align-items:baseline;padding:6px 2px;border-bottom:2px solid var(--fg)}
+.ghead span:first-child{font-weight:600;text-transform:uppercase;letter-spacing:.07em;font-size:.78rem}
+.ghead .money{font-size:.82rem;color:var(--muted)}
+.item{display:grid;grid-template-columns:30px 1fr auto 30px;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px dashed var(--line)}
+.chk{width:26px;height:26px;border-radius:8px;border:2px solid var(--muted);background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--accent-ink);padding:0}
+.item.done .chk{background:var(--accent);border-color:var(--accent)}
+.item.done .name{text-decoration:line-through;color:var(--muted)}
+.name{min-width:0;overflow-wrap:anywhere}
+.name small{display:block;color:var(--muted);font-size:.78rem}
+.price{width:96px;text-align:right;font-family:var(--mono);font-size:.9rem;padding:7px 8px}
+.del{border:0;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;border-radius:8px;height:30px}
+.del:hover{color:var(--danger)}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.chart{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;height:150px}
+.col{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.col .b{width:100%;max-width:44px;background:var(--accent-soft);border-radius:6px 6px 2px 2px;min-height:2px}
+.col.now .b{background:var(--accent)}
+.col .v{font-family:var(--mono);font-size:.66rem;color:var(--muted);white-space:nowrap}
+.col .m{font-size:.75rem;color:var(--muted);text-transform:capitalize}
+.hist{display:flex;flex-direction:column}
+.hrow{display:grid;grid-template-columns:1fr auto 28px;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);align-items:center}
+.hrow small{color:var(--muted);display:block;font-size:.78rem}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.stat .val{font-size:1.2rem}
+.note{font-size:.82rem;color:var(--muted)}
+.warn{color:var(--warn)}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--fg);max-width:min(420px,92vw);padding:20px}
+dialog::backdrop{background:rgb(0 0 0 / .45)}
+dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;z-index:20}
+.settings{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.settings input{width:140px}
+@media (max-width:430px){
+  form.add{grid-template-columns:1fr}
+  .bar{grid-template-columns:1fr 1fr}
+  .bar .btn{grid-column:1/-1}
+  .price{width:84px}
+}
+@media (prefers-reduced-motion:no-preference){.col .b{transition:height .4s ease}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <h1>Lista de compras</h1>
+    <p class="sub" id="status">Carregando sua lista…</p>
+  </header>
+
+  <section class="bar" aria-label="Totais">
+    <div><div class="lbl">No carrinho</div><div class="val money" id="tCart">R$ 0,00</div></div>
+    <div><div class="lbl">Lista inteira</div><div class="val money" id="tAll">R$ 0,00</div><div class="budget" id="tBudget"></div></div>
+    <button class="btn" id="finish" type="button">Finalizar compra</button>
+  </section>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <input id="fName" placeholder="Item (ex.: arroz 5 kg)" required maxlength="60" aria-label="Nome do item">
+    <select id="fCat" aria-label="Categoria"></select>
+    <div class="row2">
+      <input id="fQty" type="number" min="1" step="1" value="1" aria-label="Quantidade" inputmode="numeric">
+      <input id="fPrice" placeholder="Preço unit. (opcional)" inputmode="decimal" aria-label="Preço unitário em reais">
+      <button class="btn primary" type="submit">Adicionar</button>
+    </div>
+  </form>
+
+  <div id="freqWrap" hidden>
+    <p class="note" style="margin:0 0 6px">Você costuma comprar (toque para adicionar):</p>
+    <div class="chips" id="freq"></div>
+  </div>
+
+  <section id="list" aria-label="Itens da lista"></section>
+
+  <section class="panel" aria-labelledby="hTitle">
+    <h2 id="hTitle">Gastos no mercado</h2>
+    <div class="stats">
+      <div class="stat"><div class="lbl">Este mês</div><div class="val money" id="sMonth">R$ 0,00</div></div>
+      <div class="stat"><div class="lbl">Média por compra</div><div class="val money" id="sAvg">R$ 0,00</div></div>
+      <div class="stat"><div class="lbl">Compras no mês</div><div class="val money" id="sCount">0</div></div>
+    </div>
+    <div class="chart" id="chart" role="img" aria-label="Gasto por mês nos últimos 6 meses"></div>
+    <div class="settings">
+      <label for="budget" class="note">Orçamento mensal do mercado:</label>
+      <input id="budget" inputmode="decimal" placeholder="ex.: 1.200,00">
+    </div>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="bTitle">
+    <h2 id="bTitle">Backup dos dados</h2>
+    <p class="note" style="margin:0">Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <div class="settings">
+      <button class="btn" type="button" id="exp">Salvar backup</button>
+      <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
+      <input type="file" id="imp" accept="application/json,.json" hidden>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <h2>Finalizar compra</h2>
+  <p id="dlgText"></p>
+  <label class="note" for="dTotal">Valor pago (confira no cupom):</label>
+  <input id="dTotal" inputmode="decimal">
+  <label class="note" for="dStore" style="display:block;margin-top:8px">Mercado (opcional):</label>
+  <input id="dStore" maxlength="40" placeholder="ex.: Atacadão">
+  <div class="acts">
+    <button class="btn" type="button" id="dCancel">Cancelar</button>
+    <button class="btn primary" type="button" id="dOk">Salvar no histórico</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const CATS=["Hortifruti","Carnes e peixes","Frios e laticínios","Padaria","Mercearia","Bebidas","Limpeza","Higiene","Pet","Outros"];
+const brl=v=>(Number(v)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const parseBRL=s=>{if(s==null)return null;s=String(s).trim().replace(/[R$\s]/g,"");if(!s)return null;if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");const n=parseFloat(s);return isFinite(n)&&n>=0?Math.round(n*100)/100:null};
+const fmtIn=v=>v==null?"":Number(v).toFixed(2).replace(".",",");
+const $=id=>document.getElementById(id);
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+let items=[],trips=[],budget=null,db=null,mode="local";
+
+/* ---------- storage: db when available, localStorage fallback ---------- */
+const LS={get(k,d){try{const v=localStorage.getItem("lc_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("lc_"+k,JSON.stringify(v))}catch(e){}}};
+function saveLocal(){if(mode==="local"){LS.set("items",items);LS.set("trips",trips);LS.set("budget",budget)}}
+async function putItem(it){if(db){try{await db.collection("itens").doc(it.id).set(it)}catch(e){fail(e)}}else saveLocal()}
+async function delItem(id){if(db){try{await db.collection("itens").doc(id).delete()}catch(e){fail(e)}}else saveLocal()}
+async function putTrip(t){if(db){try{await db.collection("compras").doc(t.id).set(t)}catch(e){fail(e)}}else saveLocal()}
+async function delTrip(id){if(db){try{await db.collection("compras").doc(id).delete()}catch(e){fail(e)}}else saveLocal()}
+async function putBudget(){if(db){try{await db.doc("config/geral").set({orcamento:budget})}catch(e){fail(e)}}else saveLocal()}
+function fail(e){toast("Não consegui salvar. Verifique a conexão e tente de novo.");console.error(e)}
+
+/* ---------- render ---------- */
+function render(){
+  const all=items.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
+  const cart=items.filter(i=>i.ok).reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
+  $("tAll").textContent=brl(all);$("tCart").textContent=brl(cart);
+  const sem=items.filter(i=>i.preco==null).length;
+  const left=items.filter(i=>!i.ok).length;
+  $("finish").disabled=!items.some(i=>i.ok);
+  const mTotal=monthTotal(new Date());
+  if(budget){const rest=budget-mTotal-all;$("tBudget").textContent=rest>=0?`Sobra ${brl(rest)} do orçamento`:`Passa ${brl(-rest)} do orçamento`}else $("tBudget").textContent="";
+  $("status").textContent=items.length?`${left} de ${items.length} itens faltando`+(sem?` · ${sem} sem preço`:""):"Lista vazia";
+
+  const list=$("list");list.replaceChildren();
+  if(!items.length){const e=el("div","empty");e.append(el("strong",null,"Nada na lista ainda."),el("div",null,"Digite um item acima, escolha a categoria e toque em Adicionar. O preço é opcional e pode ser preenchido no mercado."));list.append(e)}
+  for(const c of CATS){
+    const g=items.filter(i=>i.cat===c);if(!g.length)continue;
+    g.sort((a,b)=>(a.ok-b.ok)||a.nome.localeCompare(b.nome,"pt-BR"));
+    const box=el("div","group");const h=el("div","ghead");
+    h.append(el("span",null,c),el("span","money",brl(g.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0))));box.append(h);
+    for(const it of g){
+      const r=el("div","item"+(it.ok?" done":""));
+      const b=el("button","chk",it.ok?"✓":"");b.type="button";b.setAttribute("aria-pressed",it.ok);b.setAttribute("aria-label",(it.ok?"Desmarcar ":"Marcar ")+it.nome);
+      b.onclick=()=>{it.ok=!it.ok;render();putItem(it)};
+      const n=el("div","name",it.nome);
+      n.append(el("small",null,(it.qtd>1?it.qtd+" un · ":"")+(it.preco!=null?brl(it.preco)+" cada":"sem preço")));
+      const p=el("input","price");p.id="p_"+it.id;p.inputMode="decimal";p.placeholder="R$";p.value=fmtIn(it.preco);p.setAttribute("aria-label","Preço de "+it.nome);
+      p.onchange=()=>{const v=parseBRL(p.value);it.preco=v;render();putItem(it)};
+      const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Remover "+it.nome);
+      d.onclick=()=>{items=items.filter(x=>x.id!==it.id);render();delItem(it.id);toast("Removido: "+it.nome)};
+      r.append(b,n,p,d);box.append(r);
+    }
+    list.append(box);
+  }
+  renderFreq();renderHist();
+}
+function renderFreq(){
+  const cnt={};for(const t of trips)for(const i of (t.itens||[])){const k=i.nome.toLowerCase();cnt[k]=cnt[k]||{n:0,i};cnt[k].n++;cnt[k].i=i}
+  const inList=new Set(items.map(i=>i.nome.toLowerCase()));
+  const top=Object.values(cnt).filter(x=>!inList.has(x.i.nome.toLowerCase())).sort((a,b)=>b.n-a.n).slice(0,10);
+  $("freqWrap").hidden=!top.length;const f=$("freq");f.replaceChildren();
+  for(const x of top){const c=el("button","chip","+ "+x.i.nome);c.type="button";c.onclick=()=>addItem(x.i.nome,x.i.cat,1,x.i.preco??null);f.append(c)}
+}
+function monthKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
+function monthTotal(d){const k=monthKey(d);return trips.filter(t=>t.mes===k).reduce((s,t)=>s+t.total,0)}
+function renderHist(){
+  const now=new Date();const k=monthKey(now);
+  const mt=trips.filter(t=>t.mes===k);
+  $("sMonth").textContent=brl(monthTotal(now));$("sCount").textContent=mt.length;
+  $("sAvg").textContent=brl(trips.length?trips.reduce((s,t)=>s+t.total,0)/trips.length:0);
+  if(budget&&monthTotal(now)>budget)$("sMonth").classList.add("warn");else $("sMonth").classList.remove("warn");
+  const months=[];for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({d,v:monthTotal(d)})}
+  const max=Math.max(budget||0,...months.map(m=>m.v),1);
+  const ch=$("chart");ch.replaceChildren();
+  for(const m of months){const c=el("div","col"+(monthKey(m.d)===k?" now":""));
+    const b=el("div","b");b.style.height=Math.round(m.v/max*100)+"%";
+    c.append(el("div","v",m.v?brl(m.v).replace(/,\d\d$/,""):"–"),b,el("div","m",m.d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")));ch.append(c)}
+  const h=$("hist");h.replaceChildren();
+  if(!trips.length){h.append(el("p","note","Quando você finalizar uma compra, ela aparece aqui com a data e o valor, e entra no total do mês."));return}
+  for(const t of [...trips].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,20)){
+    const r=el("div","hrow");const a=el("div",null,new Date(t.data).toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"short"})+(t.mercado?" · "+t.mercado:""));
+    a.append(el("small",null,(t.itens||[]).length+" itens"));
+    const d=el("button","del","×");d.type="button";d.setAttribute("aria-label","Apagar compra do histórico");
+    let armed=false;d.onclick=()=>{if(!armed){armed=true;d.textContent="?";d.style.color="var(--danger)";toast("Toque de novo para apagar esta compra");setTimeout(()=>{armed=false;d.textContent="×";d.style.color=""},3000);return}
+      trips=trips.filter(x=>x.id!==t.id);render();delTrip(t.id)};
+    r.append(a,el("div","money",brl(t.total)),d);h.append(r)}
+}
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2600)}
+
+/* ---------- actions ---------- */
+function addItem(nome,cat,qtd,preco){
+  nome=nome.trim();if(!nome)return;
+  const it={id:uid(),nome,cat:CATS.includes(cat)?cat:"Outros",qtd:Math.max(1,parseInt(qtd)||1),preco,ok:false,criado:new Date().toISOString()};
+  items.push(it);render();putItem(it);
+}
+$("fCat").append(...CATS.map(c=>{const o=el("option",null,c);o.value=c;return o}));
+$("fCat").value="Mercearia";
+$("addForm").addEventListener("submit",e=>{e.preventDefault();addItem($("fName").value,$("fCat").value,$("fQty").value,parseBRL($("fPrice").value));
+  $("fName").value="";$("fPrice").value="";$("fQty").value=1;$("fName").focus()});
+$("budget").addEventListener("change",()=>{budget=parseBRL($("budget").value);$("budget").value=budget?fmtIn(budget):"";render();putBudget()});
+
+const dlg=$("dlg");
+$("finish").onclick=()=>{const ok=items.filter(i=>i.ok);const est=ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
+  $("dlgText").textContent=`${ok.length} itens marcados vão para o histórico e saem da lista. Os ${items.length-ok.length} não marcados continuam para a próxima compra.`;
+  $("dTotal").value=fmtIn(est);$("dStore").value="";if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
+$("dCancel").onclick=()=>dlg.close();
+$("dOk").onclick=async()=>{
+  const ok=items.filter(i=>i.ok);const total=parseBRL($("dTotal").value)??ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
+  const now=new Date();
+  const t={id:uid(),data:now.toISOString(),mes:monthKey(now),total,mercado:$("dStore").value.trim().slice(0,40),
+    itens:ok.map(i=>({nome:i.nome,cat:i.cat,qtd:i.qtd,preco:i.preco}))};
+  trips.push(t);items=items.filter(i=>!i.ok);dlg.close();render();toast("Compra salva: "+brl(total));
+  await putTrip(t);for(const i of ok)await delItem(i.id);
+};
+
+/* ---------- backup ---------- */
+$("exp").onclick=()=>{const data=JSON.stringify({app:"lista-compras",versao:1,salvo:new Date().toISOString(),items,trips,budget},null,1);
+  const blob=new Blob([data],{type:"application/json"});const name="lista-compras-backup-"+new Date().toISOString().slice(0,10)+".json";
+  const file=new File([blob],name,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:"Backup da lista de compras"}).catch(()=>{});return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast("Backup salvo")};
+$("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());
+  if(j.app!=="lista-compras"||!Array.isArray(j.items)||!Array.isArray(j.trips))throw 0;
+  items=j.items;trips=j.trips;budget=j.budget??null;saveLocal();$("budget").value=budget?fmtIn(budget):"";render();toast("Backup restaurado")}
+  catch(err){toast("Esse arquivo não é um backup da lista de compras.")}e.target.value=""};
+
+/* ---------- boot ---------- */
+function bootLocal(){mode="local";items=LS.get("items",[]);trips=LS.get("trips",[]);budget=LS.get("budget",null);$("budget").value=budget?fmtIn(budget):"";render()}
+bootLocal();
+window.addEventListener("storage",()=>bootLocal());
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+</script>
+</body>
+</html>
