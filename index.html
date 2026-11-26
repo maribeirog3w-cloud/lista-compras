@@ -263,7 +263,7 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
 
   <section class="panel" aria-labelledby="bTitle">
     <h2 id="bTitle">Backup dos dados</h2>
-    <p class="note" style="margin:0">Versão do app: <strong id="appVer">15</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
+    <p class="note" style="margin:0">Versão do app: <strong id="appVer">16</strong>. Seus dados ficam guardados só neste aparelho. Faça um backup de vez em quando, ou para passar a lista para outro celular.</p>
     <div class="settings">
       <button class="btn" type="button" id="exp">Salvar backup</button>
       <label class="btn" for="imp" style="display:inline-block">Restaurar backup</label>
@@ -347,7 +347,6 @@ function render(){
       const b=el("button","chk",it.ok?"✓":"");b.type="button";b.setAttribute("aria-pressed",it.ok);b.setAttribute("aria-label",(it.ok?"Desmarcar ":"Marcar ")+it.nome);
       b.onclick=()=>{it.ok=!it.ok;render();putItem(it)};
       const n=el("div","name",it.nome);
-      n.append(el("small",null,(it.qtd>1?it.qtd+" un · ":"")+(it.preco!=null?brl(it.preco)+" cada":"sem preço")));
       const lp=lastPrice(it.nome);
       if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")+(lp.mercado?" · "+lp.mercado:"")));
         const bp=bestPrice(it.nome);
