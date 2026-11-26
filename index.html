@@ -46,6 +46,17 @@ h2{font-family:var(--display);font-weight:600;font-size:1.2rem;margin:0}
 .btn:focus-visible,input:focus-visible,select:focus-visible,.chk:focus-visible{outline:2px solid var(--warn);outline-offset:2px}
 .btn[disabled]{opacity:.5;cursor:default}
 form.add{display:grid;grid-template-columns:2fr 1.3fr;gap:8px}
+.store{display:flex;flex-direction:column;gap:8px}
+.store label{font-weight:600;font-size:.82rem;text-transform:uppercase;letter-spacing:.07em}
+.store input{font-size:1.05rem;font-weight:600}
+.best{display:block;font-size:.76rem;color:var(--fg)}
+.best b{color:var(--up-green)}
+.cmpt{overflow-x:auto}
+.cmpt table{border-collapse:collapse;width:100%;font-size:.85rem}
+.cmpt th,.cmpt td{padding:7px 6px;border-bottom:1px dashed var(--line);text-align:right;white-space:nowrap}
+.cmpt th:first-child,.cmpt td:first-child{text-align:left;white-space:normal;min-width:110px}
+.cmpt th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.cmpt td.cheap{color:var(--up-green);font-weight:700}
 .namebox{display:grid;grid-template-columns:1fr 46px;gap:8px;min-width:0}
 .mic{border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:10px;cursor:pointer;display:grid;place-items:center;padding:0}
 .mic svg{width:20px;height:20px}
@@ -58,6 +69,7 @@ input,select{font:500 .95rem var(--body);color:var(--fg);background:var(--surfac
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font:500 .82rem var(--body);background:var(--accent-soft);color:var(--fg);border:0;border-radius:999px;padding:6px 11px;cursor:pointer}
 .chip:hover{outline:1px solid var(--accent)}
+.chip.sel{background:var(--accent);color:var(--accent-ink)}
 .group{display:flex;flex-direction:column}
 .ghead{display:flex;justify-content:space-between;align-items:baseline;padding:6px 2px;border-bottom:2px solid var(--fg)}
 .ghead span:first-child{font-weight:600;text-transform:uppercase;letter-spacing:.07em;font-size:.78rem}
@@ -119,6 +131,13 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
     <button class="btn" id="finish" type="button">Finalizar compra</button>
   </section>
 
+  <section class="store" aria-label="Mercado">
+    <label for="fStore">Onde você está comprando?</label>
+    <input id="fStore" list="storeList" maxlength="40" placeholder="ex.: Atacadão, Assaí, Carrefour" autocomplete="off">
+    <datalist id="storeList"></datalist>
+    <div class="chips" id="storeChips"></div>
+  </section>
+
   <form class="add" id="addForm" autocomplete="off">
     <div class="namebox">
       <input id="fName" placeholder="Item (ex.: arroz 5 kg)" required maxlength="200" aria-label="Nome do item">
@@ -153,6 +172,12 @@ dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin
       <input id="budget" inputmode="decimal" placeholder="ex.: 1.200,00">
     </div>
     <div class="hist" id="hist"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="mTitle">
+    <h2 id="mTitle">Comparar mercados</h2>
+    <div class="stats" id="mStats"></div>
+    <div class="cmpt" id="mTable"></div>
   </section>
 
   <section class="panel" aria-labelledby="bTitle">
@@ -228,7 +253,9 @@ function render(){
       const n=el("div","name",it.nome);
       n.append(el("small",null,(it.qtd>1?it.qtd+" un · ":"")+(it.preco!=null?brl(it.preco)+" cada":"sem preço")));
       const lp=lastPrice(it.nome);
-      if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")));
+      if(lp){n.append(el("small",null,"Última compra: "+brl(lp.preco)+" em "+new Date(lp.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}).replace(".","")+(lp.mercado?" · "+lp.mercado:"")));
+        const bp=bestPrice(it.nome);
+        if(bp&&bp.mercado&&bp.preco<(it.preco??lp.preco)&&norm(bp.mercado)!==norm(store)){const x=el("span","best");x.append("Mais barato no ",el("b",null,bp.mercado),": "+brl(bp.preco));n.append(x)}
         if(it.preco!=null){const d=Math.round((it.preco-lp.preco)*100)/100;const pc=lp.preco?Math.round(d/lp.preco*100):0;
           const badge=(cls,arr,txt)=>{const x=el("span","cmp "+cls);x.append(el("span","arr",arr),document.createTextNode(txt));return x};
           n.append(d>0?badge("up","▲",brl(d)+" mais caro ("+pc+"%)"):d<0?badge("down","▼",brl(-d)+" mais barato ("+(-pc)+"%)"):badge("eq","=","mesmo preço"))}}
@@ -240,7 +267,7 @@ function render(){
     }
     list.append(box);
   }
-  renderFreq();renderHist();
+  renderFreq();renderHist();renderStores();
 }
 function renderFreq(){
   const cnt={};for(const t of trips)for(const i of (t.itens||[])){const k=i.nome.toLowerCase();cnt[k]=cnt[k]||{n:0,i};cnt[k].n++;cnt[k].i=i}
@@ -251,8 +278,41 @@ function renderFreq(){
 }
 const norm=t=>String(t||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ");
 function lastPrice(nome){const k=norm(nome);let best=null;
-  for(const t of trips)for(const i of (t.itens||[]))if(i.preco!=null&&norm(i.nome)===k&&(!best||t.data>best.data))best={preco:i.preco,data:t.data};
+  for(const t of trips)for(const i of (t.itens||[]))if(i.preco!=null&&norm(i.nome)===k&&(!best||t.data>best.data))best={preco:i.preco,data:t.data,mercado:t.mercado||""};
   return best}
+/* último preço de cada produto em cada mercado */
+function priceMap(){const m={};
+  for(const t of [...trips].sort((a,b)=>a.data.localeCompare(b.data))){if(!t.mercado)continue;const ms=t.mercado.trim();
+    for(const i of (t.itens||[])){if(i.preco==null)continue;const k=norm(i.nome);m[k]=m[k]||{nome:i.nome,lojas:{}};m[k].nome=i.nome;m[k].lojas[ms]=i.preco}}
+  return m}
+function bestPrice(nome){const e=priceMap()[norm(nome)];if(!e)return null;let b=null;
+  for(const [mercado,preco] of Object.entries(e.lojas))if(!b||preco<b.preco)b={mercado,preco};return b}
+function storeNames(){const seen={};for(const t of trips)if(t.mercado){const k=norm(t.mercado);seen[k]=seen[k]||{nome:t.mercado.trim(),n:0};seen[k].n++}
+  return Object.values(seen).sort((a,b)=>b.n-a.n).map(x=>x.nome)}
+function renderStores(){
+  const names=storeNames();const dl=$("storeList");dl.replaceChildren(...names.map(n=>{const o=document.createElement("option");o.value=n;return o}));
+  const ch=$("storeChips");ch.replaceChildren();
+  for(const n of names.slice(0,6)){const c=el("button","chip"+(norm(n)===norm(store)?" sel":""),n);c.type="button";c.setAttribute("aria-pressed",norm(n)===norm(store));c.onclick=()=>{setStore(n)};ch.append(c)}
+  if(document.activeElement!==$("fStore"))$("fStore").value=store;
+  // comparação
+  const st=$("mStats");st.replaceChildren();const tb=$("mTable");tb.replaceChildren();
+  const per={};for(const t of trips){if(!t.mercado)continue;const k=norm(t.mercado);per[k]=per[k]||{nome:t.mercado.trim(),n:0,tot:0};per[k].n++;per[k].tot+=t.total}
+  const lojas=Object.values(per);
+  if(!lojas.length){tb.append(el("p","note","Escolha o mercado no topo antes de começar. Depois de finalizar compras em mercados diferentes, aqui aparece quanto cada um cobra pelos mesmos produtos."));return}
+  for(const l of lojas.sort((a,b)=>b.n-a.n)){const d=el("div","stat");d.append(el("div","lbl",l.nome),el("div","val money",brl(l.tot)),el("div","note",l.n+(l.n>1?" compras":" compra")+" · média "+brl(l.tot/l.n)));st.append(d)}
+  const pm=Object.values(priceMap()).filter(e=>Object.keys(e.lojas).length>1);
+  if(!pm.length){tb.append(el("p","note","Quando o mesmo produto for comprado em dois mercados ou mais, a tabela de preços aparece aqui com o mais barato em verde."));return}
+  const cols=[...new Set(pm.flatMap(e=>Object.keys(e.lojas)))];
+  const wins={};const table=el("table");const hr=el("tr");hr.append(el("th",null,"Produto"),...cols.map(c=>el("th",null,c)));const th=el("thead");th.append(hr);table.append(th);
+  const body=el("tbody");
+  for(const e of pm.sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"))){const min=Math.min(...Object.values(e.lojas));const r=el("tr");r.append(el("td",null,e.nome));
+    for(const c of cols){const v=e.lojas[c];const td=el("td","money"+(v===min?" cheap":""),v==null?"–":brl(v));if(v===min)wins[c]=(wins[c]||0)+1;r.append(td)}body.append(r)}
+  table.append(body);tb.append(table);
+  const top=Object.entries(wins).sort((a,b)=>b[1]-a[1])[0];
+  if(top)tb.append(el("p","note",top[0]+" teve o menor preço em "+top[1]+" de "+pm.length+" produtos comparados."));
+}
+let store="";try{store=localStorage.getItem("lc_store")||""}catch(e){}
+function setStore(n){store=(n||"").trim().slice(0,40);try{localStorage.setItem("lc_store",store)}catch(e){};$("fStore").value=store;render()}
 function monthKey(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")}
 function monthTotal(d){const k=monthKey(d);return trips.filter(t=>t.mes===k).reduce((s,t)=>s+t.total,0)}
 function renderHist(){
@@ -345,6 +405,7 @@ $("mic").onclick=()=>{
 };
 
 let catTouched=false;$("fCat").addEventListener("change",()=>catTouched=true);
+$("fStore").addEventListener("change",()=>setStore($("fStore").value));
 $("addForm").addEventListener("submit",e=>{e.preventDefault();const v=$("fName").value;
   const list=parseSpoken(v);const fPrice=parseBRL($("fPrice").value);const fQty=parseInt($("fQty").value)||1;
   if(list.length>1){addMany(v,catTouched?$("fCat").value:null)}
@@ -355,26 +416,26 @@ $("budget").addEventListener("change",()=>{budget=parseBRL($("budget").value);$(
 const dlg=$("dlg");
 $("finish").onclick=()=>{const ok=items.filter(i=>i.ok);const est=ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
   $("dlgText").textContent=`${ok.length} itens marcados vão para o histórico e saem da lista. Os ${items.length-ok.length} não marcados continuam para a próxima compra.`;
-  $("dTotal").value=fmtIn(est);$("dStore").value="";if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
+  $("dTotal").value=fmtIn(est);$("dStore").value=store;if(dlg.showModal)dlg.showModal();else dlg.setAttribute("open","")};
 $("dCancel").onclick=()=>dlg.close();
 $("dOk").onclick=async()=>{
   const ok=items.filter(i=>i.ok);const total=parseBRL($("dTotal").value)??ok.reduce((s,i)=>s+(i.preco||0)*(i.qtd||1),0);
   const now=new Date();
   const t={id:uid(),data:now.toISOString(),mes:monthKey(now),total,mercado:$("dStore").value.trim().slice(0,40),
     itens:ok.map(i=>({nome:i.nome,cat:i.cat,qtd:i.qtd,preco:i.preco}))};
-  trips.push(t);items=items.filter(i=>!i.ok);dlg.close();render();toast("Compra salva: "+brl(total));
+  trips.push(t);if(t.mercado&&!store)setStore(t.mercado);items=items.filter(i=>!i.ok);dlg.close();render();toast("Compra salva: "+brl(total));
   await putTrip(t);for(const i of ok)await delItem(i.id);
 };
 
 /* ---------- backup ---------- */
-$("exp").onclick=()=>{const data=JSON.stringify({app:"lista-compras",versao:1,salvo:new Date().toISOString(),items,trips,budget},null,1);
+$("exp").onclick=()=>{const data=JSON.stringify({app:"lista-compras",versao:1,salvo:new Date().toISOString(),items,trips,budget,mercado:store},null,1);
   const blob=new Blob([data],{type:"application/json"});const name="lista-compras-backup-"+new Date().toISOString().slice(0,10)+".json";
   const file=new File([blob],name,{type:"application/json"});
   if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:"Backup da lista de compras"}).catch(()=>{});return}
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast("Backup salvo")};
 $("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());
   if(j.app!=="lista-compras"||!Array.isArray(j.items)||!Array.isArray(j.trips))throw 0;
-  items=j.items;trips=j.trips;budget=j.budget??null;saveLocal();$("budget").value=budget?fmtIn(budget):"";render();toast("Backup restaurado")}
+  items=j.items;trips=j.trips;budget=j.budget??null;if(j.mercado)setStore(j.mercado);saveLocal();$("budget").value=budget?fmtIn(budget):"";render();toast("Backup restaurado")}
   catch(err){toast("Esse arquivo não é um backup da lista de compras.")}e.target.value=""};
 
 /* ---------- boot ---------- */
