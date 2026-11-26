@@ -1,5 +1,5 @@
 {
- "atualizado": "2026-11-26T11:44:01+00:00",
+ "atualizado": "2026-11-26T11:45:33+00:00",
  "produtos": {
   "arroz 5 kg": {
    "nome": "Arroz 5 kg",
@@ -77,14 +77,6 @@
   }
  },
  "erros": [
-  "Carrefour / Arroz 5 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Feijão carioca 1 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Café 500 g: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Leite integral 1 L: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Açúcar 5 kg: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Atacadão / Óleo de soja 900 ml: nenhum dos 50 resultados bate com o nome/tamanho",
-  "Carrefour / Óleo de soja 900 ml: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Detergente 500 ml: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable",
-  "Carrefour / Papel higiênico 12 rolos: legacy: HTTP Error 503: Service Unavailable; is: HTTP Error 503: Service Unavailable; is-tp: HTTP Error 503: Service Unavailable"
+  "Atacadão / Óleo de soja 900 ml: nenhum dos 2 resultados bate com o nome/tamanho"
  ]
 }
